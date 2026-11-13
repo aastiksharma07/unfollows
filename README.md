@@ -8,7 +8,9 @@ A tiny, private, single-page web app. Upload the `followers` and `following` JSO
 
 ## Privacy
 
-Everything runs in your browser. There’s no server, no login, no tracking, and your files never leave your device. It doesn’t touch your Instagram account. The **Unfollow** button just opens the person’s profile, and you unfollow them yourself.
+Everything runs in your browser. There’s no server, no login, no tracking, and your files never leave your device.
+
+The one exception is profile pictures: for each account in the result list, the username is sent to [unavatar.io](https://unavatar.io) (a free, open-source avatar service) to fetch the picture. If a picture can’t be loaded, a letter avatar is shown instead. It doesn’t touch your Instagram account. The **Unfollow** button just opens the person’s profile, and you unfollow them yourself.
 
 ## How to use
 
@@ -27,6 +29,7 @@ No export handy? Try the files in [`sample/`](sample/).
 ## Features
 
 - Works with both old and new Instagram export formats
+- Profile pictures via [unavatar.io](https://unavatar.io), no API key needed
 - Search, and sort by newest, oldest, or A–Z
 - Remembers which profiles you’ve already opened
 - Light and dark theme
