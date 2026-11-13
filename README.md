@@ -4,11 +4,26 @@ See who you follow on Instagram that doesn’t follow you back.
 
 **Live:** https://unfollows.aastikz.me
 
-A tiny, private, single-page web app. Upload the `followers` and `following` JSON files from your Instagram data export and get a clean list of accounts that don’t follow you back, each with a button that opens their profile so you can unfollow.
+![tests](https://github.com/aastiksharma07/unfollows/actions/workflows/tests.yml/badge.svg)
+
+A tiny, private Python project with a web front end. Upload the `followers` and `following` JSON files from your Instagram data export and get a clean list of accounts that don’t follow you back, each with a button that opens their profile so you can unfollow.
+
+## How it works
+
+All the logic is in **[`unfollows.py`](unfollows.py)**, a standard-library-only Python module that:
+
+1. parses Instagram’s export files (it handles both the old and new JSON layouts),
+2. works out who is in *following* but not in *followers* (case-insensitive, de-duplicated),
+3. sorts the result.
+
+That one file runs in two places:
+
+- **In the browser**, through [Pyodide](https://pyodide.org) (Python compiled to WebAssembly). `app.js` only handles the UI. It hands the uploaded files to `unfollows.compare_json()` and renders what comes back. Pyodide is about 6 MB and the browser caches it after the first visit.
+- **On the command line**, as a normal Python script.
 
 ## Privacy
 
-Everything runs in your browser. There’s no server, no login, no tracking, and your files never leave your device.
+Everything runs in your browser, Python included. There’s no server, no login, no tracking, and your files never leave your device.
 
 The one exception is profile pictures: for each account in the result list, the username is sent to [unavatar.io](https://unavatar.io) (a free, open-source avatar service) to fetch the picture. If a picture can’t be loaded, a letter avatar is shown instead. It doesn’t touch your Instagram account. The **Unfollow** button just opens the person’s profile, and you unfollow them yourself.
 
@@ -33,11 +48,42 @@ No export handy? Try the files in [`sample/`](sample/).
 - Search, and sort by newest, oldest, or A–Z
 - Remembers which profiles you’ve already opened
 - Light and dark theme
-- No build step and no dependencies
+- No build step, and no Python dependencies
 
-## Run locally
+## Command line
 
-It’s just static files, so you can open `index.html` directly, or serve the folder:
+Requires Python 3.9+, with no dependencies.
+
+```bash
+python unfollows.py followers_1.json following.json
+```
+
+```
+Following 5 · Followers 3 · Don't follow back 3
+
+@coffee.daily  09 Mar 2024  https://www.instagram.com/coffee.daily/
+@mira.designs  11 Jan 2024  https://www.instagram.com/mira.designs/
+@nasa          14 Aug 2023  https://www.instagram.com/nasa/
+```
+
+Options: `--sort recent|oldest|az` and `--json`. Pass several `followers_*.json` files if your export is split. Or install it:
+
+```bash
+pip install .
+unfollows followers_1.json following.json --sort az
+```
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Tests run on every push via GitHub Actions.
+
+## Run the web app locally
+
+The page fetches `unfollows.py`, so serve the folder rather than opening the file directly:
 
 ```bash
 python3 -m http.server 8000
@@ -48,12 +94,15 @@ Then visit http://localhost:8000.
 ## Project structure
 
 ```
-index.html   page markup
-style.css    styles (light + dark)
-app.js       parsing, comparison, UI
-favicon.svg  icon
-CNAME        custom domain for GitHub Pages
-sample/      example export files
+unfollows.py      parsing + comparison + CLI (the core)
+tests/            unit tests (unittest)
+index.html        page markup
+style.css         styles (light + dark)
+app.js            UI; runs unfollows.py via Pyodide
+pyproject.toml    packaging, `unfollows` console script
+favicon.svg       icon
+CNAME             custom domain for GitHub Pages
+sample/           example export files
 ```
 
 ## Deploy
