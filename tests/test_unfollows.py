@@ -75,16 +75,10 @@ class CompareTest(unittest.TestCase):
             unfollows.compare([[entry(value="x")]], [{}])
 
 
-class CompareJsonTest(unittest.TestCase):
-    def test_round_trip(self):
-        files = lambda name: json.dumps([{"name": name, "text": (SAMPLE / name).read_text()}])
-        out = json.loads(unfollows.compare_json(files("followers_1.json"), files("following.json"), "az"))
-        self.assertEqual(len(out["not_following_back"]), 3)
-
+class DecodeTest(unittest.TestCase):
     def test_invalid_json_message(self):
-        bad = json.dumps([{"name": "broken.json", "text": "{"}])
         with self.assertRaisesRegex(ValueError, "broken.json"):
-            unfollows.compare_json(bad, bad)
+            unfollows._decode("{", "broken.json")
 
 
 class CliTest(unittest.TestCase):

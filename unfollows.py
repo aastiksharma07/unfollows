@@ -1,9 +1,6 @@
 """Find Instagram accounts you follow that don't follow you back.
 
-Works in two places:
-
-* In the browser, via Pyodide: ``app.js`` loads this file and calls ``compare_json``.
-* On the command line::
+Usage::
 
       python unfollows.py followers_1.json following.json
       python unfollows.py followers_1.json followers_2.json following.json --sort az
@@ -29,7 +26,6 @@ __all__ = [
     "not_following_back",
     "sort_accounts",
     "compare",
-    "compare_json",
     "profile_url",
 ]
 
@@ -159,18 +155,6 @@ def _decode(text: str, name: str) -> Any:
         return json.loads(text)
     except json.JSONDecodeError as exc:
         raise ValueError(f"“{name}” isn’t valid JSON.") from exc
-
-
-def compare_json(followers_files: str, following_files: str, sort: str = "recent") -> str:
-    """Browser entry point.
-
-    Each argument is a JSON array of ``{"name": ..., "text": ...}`` objects
-    (the raw uploaded files). Returns the ``compare`` result as a JSON string.
-    """
-    def load(files_json: str) -> list[Any]:
-        return [_decode(f["text"], f["name"]) for f in json.loads(files_json)]
-
-    return json.dumps(compare(load(followers_files), load(following_files), sort))
 
 
 # ---------------------------------------------------------------- CLI
