@@ -4,70 +4,52 @@
 
     const $ = (id) => document.getElementById(id);
 
-    /* ---------- Parsing ---------- */
+    /* ---------- Python (Pyodide) ---------- */
 
-    // Pull a username out of an Instagram profile URL.
-    function userFromHref(href) {
-        if (!href) return '';
-        const m = String(href).match(/instagram\.com\/(?:_u\/)?([^/?#]+)/i);
-        return m ? decodeURIComponent(m[1]) : '';
-    }
+    // All parsing and comparison lives in unfollows.py. Pyodide runs that file
+    // in the browser via WebAssembly, so the uploads never leave the device.
+    const PYODIDE = 'https://cdn.jsdelivr.net/npm/pyodide@0.26.4/';
+    let pyReady = null;
 
-    // Instagram has shipped a few export shapes over the years:
-    //   followers_1.json -> [ { string_list_data: [{ href, value, timestamp }] } ]
-    //   following.json   -> { relationships_following: [ { title, string_list_data: [{ href, timestamp }] } ] }
-    // Newer exports put the username in `title` and drop `value`. Handle all of them.
-    function extractEntries(json) {
-        let items = [];
-        if (Array.isArray(json)) {
-            items = json;
-        } else if (json && typeof json === 'object') {
-            for (const key of Object.keys(json)) {
-                if (Array.isArray(json[key])) items = items.concat(json[key]);
-            }
-        }
-
-        const out = [];
-        for (const item of items) {
-            if (!item || typeof item !== 'object') continue;
-            const data = Array.isArray(item.string_list_data) ? item.string_list_data : [];
-            const first = data[0] || {};
-            const username = (first.value || item.title || userFromHref(first.href) || '').trim();
-            if (!username) continue;
-            out.push({ username, timestamp: Number(first.timestamp) || 0 });
-        }
-        return out;
-    }
-
-    function readJson(file) {
-        return file.text().then((text) => {
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                throw new Error(`“${file.name}” isn’t valid JSON.`);
-            }
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const el = document.createElement('script');
+            el.src = src;
+            el.onload = resolve;
+            el.onerror = () => reject(new Error('Couldn’t load Python. Check your connection and try again.'));
+            document.head.append(el);
         });
     }
 
-    async function readAll(files) {
-        const lists = await Promise.all([...files].map(readJson));
-        return lists.flatMap(extractEntries);
+    function python() {
+        if (!pyReady) {
+            pyReady = (async () => {
+                const [, source] = await Promise.all([
+                    loadScript(PYODIDE + 'pyodide.js'),
+                    fetch('unfollows.py').then((r) => {
+                        if (!r.ok) throw new Error('Couldn’t load unfollows.py.');
+                        return r.text();
+                    }),
+                ]);
+                const py = await loadPyodide({ indexURL: PYODIDE });
+                py.FS.writeFile('/home/pyodide/unfollows.py', source);
+                py.runPython('import unfollows');
+                return py.pyimport('unfollows');
+            })();
+            pyReady.catch(() => { pyReady = null; }); // allow a retry
+        }
+        return pyReady;
     }
 
-    /* ---------- Comparison ---------- */
+    async function filePayload(files) {
+        const list = await Promise.all([...files].map(async (f) => ({ name: f.name, text: await f.text() })));
+        return JSON.stringify(list);
+    }
 
-    // People in `following` whose username isn't in `followers`.
-    function notFollowingBack(followers, following) {
-        const set = new Set(followers.map((f) => f.username.toLowerCase()));
-        const seen = new Set();
-        const out = [];
-        for (const f of following) {
-            const key = f.username.toLowerCase();
-            if (set.has(key) || seen.has(key)) continue;
-            seen.add(key);
-            out.push(f);
-        }
-        return out;
+    // Python raises ValueError with a friendly message; surface just that line.
+    function pyMessage(err) {
+        const m = String(err && err.message || err).match(/ValueError: (.+)\s*$/);
+        return m ? m[1].trim() : (err && err.message) || 'Something went wrong reading those files.';
     }
 
     /* ---------- State ---------- */
@@ -104,6 +86,7 @@
         small.textContent = list ? list.map((f) => f.name).join(', ') : small.dataset.default;
         $('compareBtn').disabled = !(state.files.followers && state.files.following);
         showError('');
+        if (list) python().catch(() => {}); // warm up Python while the user picks files
     }
 
     // Dropping a single file on the wrong box is common; guess by name.
@@ -233,18 +216,19 @@
         e.preventDefault();
         const btn = $('compareBtn');
         btn.disabled = true;
-        btn.textContent = 'Comparing…';
+        btn.textContent = pyReady ? 'Comparing…' : 'Loading Python…';
         try {
+            const mod = await python();
+            btn.textContent = 'Comparing…';
             const [followers, following] = await Promise.all([
-                readAll(state.files.followers),
-                readAll(state.files.following),
+                filePayload(state.files.followers),
+                filePayload(state.files.following),
             ]);
-            if (!followers.length) throw new Error('No followers found — is that the right file?');
-            if (!following.length) throw new Error('No following found — is that the right file?');
+            const result = JSON.parse(mod.compare_json(followers, following, 'recent'));
 
-            state.ghosts = notFollowingBack(followers, following);
-            $('nFollowers').textContent = new Set(followers.map((f) => f.username.toLowerCase())).size;
-            $('nFollowing').textContent = new Set(following.map((f) => f.username.toLowerCase())).size;
+            state.ghosts = result.not_following_back;
+            $('nFollowers').textContent = result.followers;
+            $('nFollowing').textContent = result.following;
             $('nGhosts').textContent = state.ghosts.length;
 
             render();
@@ -252,7 +236,7 @@
             $('result').hidden = false;
             window.scrollTo({ top: 0 });
         } catch (err) {
-            showError(err.message || 'Something went wrong reading those files.');
+            showError(pyMessage(err));
         } finally {
             btn.textContent = 'Compare';
             btn.disabled = !(state.files.followers && state.files.following);
