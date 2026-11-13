@@ -155,24 +155,13 @@
         return copy;
     }
 
-    // Profile picture via unavatar.io (free, open source, no key). Falls back to
-    // the first letter if it can't be fetched — Instagram often blocks lookups.
+    // Letter avatar. Instagram blocks free profile-picture lookups, so we don't try.
     function avatar(username) {
         const wrap = document.createElement('span');
         wrap.className = 'avatar';
         const letter = document.createElement('span');
         letter.textContent = username.replace(/[^a-z0-9]/gi, '').charAt(0) || '@';
         wrap.append(letter);
-
-        const img = document.createElement('img');
-        img.alt = '';
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        img.referrerPolicy = 'no-referrer';
-        img.src = 'https://unavatar.io/instagram/' + encodeURIComponent(username) + '?fallback=false';
-        img.addEventListener('load', () => img.classList.add('loaded'));
-        img.addEventListener('error', () => img.remove());
-        wrap.append(img);
         return wrap;
     }
 

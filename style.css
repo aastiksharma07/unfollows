@@ -314,8 +314,7 @@ body {
     background: var(--accent);
 }
 
-.avatar span,
-.avatar img {
+.avatar span {
     width: 100%;
     height: 100%;
     display: grid;
@@ -329,17 +328,6 @@ body {
     text-transform: uppercase;
 }
 
-.avatar img {
-    position: absolute;
-    inset: 2px;
-    width: calc(100% - 4px);
-    height: calc(100% - 4px);
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.avatar img.loaded { opacity: 1; }
 
 .who { min-width: 0; flex: 1; }
 
