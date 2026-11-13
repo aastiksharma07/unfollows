@@ -8,9 +8,10 @@
     --ink: #14171c;
     --muted: #5d6676;
     --line: #e1e4ea;
-    --accent: #0f766e;
+    --accent: #d62976;
     --on-accent: #ffffff;
-    --tint: #e8f3f1;
+    --tint: #fdeef4;
+    --ig: linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%);
     --danger: #b42318;
     --field: #ffffff;
 }
@@ -22,9 +23,10 @@
     --ink: #e8eaee;
     --muted: #9aa3b0;
     --line: #272c34;
-    --accent: #2dd4bf;
-    --on-accent: #04201c;
-    --tint: #12302d;
+    --accent: #ff5c9e;
+    --on-accent: #ffffff;
+    --tint: #33121f;
+    --ig: linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%);
     --danger: #f28b82;
     --field: #0e1013;
 }
@@ -158,7 +160,7 @@ body {
 }
 
 .drop.ready { border-style: solid; }
-.drop.ready .drop-ico { background: var(--accent); color: var(--on-accent); }
+.drop.ready .drop-ico { background: var(--ig); color: #fff; }
 .drop.ready small { color: var(--ink); }
 
 .error { color: var(--danger); font-size: 14px; }
@@ -183,7 +185,7 @@ body {
 }
 
 .btn:hover { border-color: var(--muted); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary { background: var(--ig); border-color: transparent; color: #fff; }
 .btn.primary:hover { filter: brightness(1.06); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
 .btn.block { width: 100%; }
