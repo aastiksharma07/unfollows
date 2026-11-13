@@ -1,0 +1,6 @@
+.DS_Store
+*.log
+# Never commit personal Instagram exports
+followers*.json
+following*.json
+!sample/*.json
