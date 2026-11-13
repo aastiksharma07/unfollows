@@ -4,7 +4,3 @@
 followers*.json
 following*.json
 !sample/*.json
-__pycache__/
-*.pyc
-*.egg-info/
-build/
