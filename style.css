@@ -240,11 +240,11 @@ body {
 
 /* ---------- Results ---------- */
 
-.result { display: grid; gap: 16px; margin-top: 32px; }
+.result { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 32px; }
 
 .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     border: 1px solid var(--line);
     border-radius: 14px;
     background: var(--surface);
