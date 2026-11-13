@@ -12,6 +12,7 @@ unfollows = "unfollows:main"
 
 [project.urls]
 Homepage = "https://unfollows.aastikz.me"
+Source = "https://github.com/aastiksharma07/unfollows"
 
 [build-system]
 requires = ["setuptools>=61"]

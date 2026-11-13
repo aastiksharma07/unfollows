@@ -1,58 +1,25 @@
 # Unfollows
 
-See who you follow on Instagram that doesn’t follow you back.
-
-**Live:** https://unfollows.aastikz.me
-
 ![tests](https://github.com/aastiksharma07/unfollows/actions/workflows/tests.yml/badge.svg)
+![python](https://img.shields.io/badge/python-3.9%2B-blue)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-A tiny, private Python project with a web front end. Upload the `followers` and `following` JSON files from your Instagram data export and get a clean list of accounts that don’t follow you back, each with a button that opens their profile so you can unfollow.
+A small Python tool that finds the Instagram accounts you follow that don’t follow you back, using the JSON files from Instagram’s official data export. No login, no scraping, no API keys.
 
-## How it works
-
-All the logic is in **[`unfollows.py`](unfollows.py)**, a standard-library-only Python module that:
-
-1. parses Instagram’s export files (it handles both the old and new JSON layouts),
-2. works out who is in *following* but not in *followers* (case-insensitive, de-duplicated),
-3. sorts the result.
-
-That one file runs in two places:
-
-- **In the browser**, through [Pyodide](https://pyodide.org) (Python compiled to WebAssembly). `app.js` only handles the UI. It hands the uploaded files to `unfollows.compare_json()` and renders what comes back. Pyodide is about 6 MB and the browser caches it after the first visit.
-- **On the command line**, as a normal Python script.
-
-## Privacy
-
-Everything runs in your browser, Python included. There’s no server, no login, no tracking, and your files never leave your device.
-
-The one exception is profile pictures: for each account in the result list, the username is sent to [unavatar.io](https://unavatar.io) (a free, open-source avatar service) to fetch the picture. If a picture can’t be loaded, a letter avatar is shown instead. It doesn’t touch your Instagram account. The **Unfollow** button just opens the person’s profile, and you unfollow them yourself.
-
-## How to use
-
-1. **Get your data from Instagram**
-   - Go to **Accounts Center → Your information and permissions → Download your information**.
-   - Choose **Some of your information → Followers and following**.
-   - Pick **Download to device**, format **JSON**, date range **All time**.
-2. **Unzip** the download and open `connections/followers_and_following/`.
-3. **Open** [unfollows.aastikz.me](https://unfollows.aastikz.me) and upload:
-   - `followers_1.json` (plus `followers_2.json`, … if you have several; you can select them all at once)
-   - `following.json`
-4. Press **Compare**.
-
-No export handy? Try the files in [`sample/`](sample/).
+**Web version:** https://unfollows.aastikz.me (source on the [`web`](../../tree/web) branch)
 
 ## Features
 
-- Works with both old and new Instagram export formats
-- Profile pictures via [unavatar.io](https://unavatar.io), no API key needed
-- Search, and sort by newest, oldest, or A–Z
-- Remembers which profiles you’ve already opened
-- Light and dark theme
-- No build step, and no Python dependencies
+- Reads both the old and new Instagram export formats
+- Handles split exports (`followers_1.json`, `followers_2.json`, …)
+- Case-insensitive, de-duplicated comparison
+- Sort by newest, oldest, or A–Z
+- Plain-text or `--json` output
+- Standard library only, with type hints and unit tests
 
-## Command line
+## Usage
 
-Requires Python 3.9+, with no dependencies.
+Requires Python 3.9+.
 
 ```bash
 python unfollows.py followers_1.json following.json
@@ -66,12 +33,50 @@ Following 5 · Followers 3 · Don't follow back 3
 @nasa          14 Aug 2023  https://www.instagram.com/nasa/
 ```
 
-Options: `--sort recent|oldest|az` and `--json`. Pass several `followers_*.json` files if your export is split. Or install it:
+| Option | Description |
+| --- | --- |
+| `--sort recent\|oldest\|az` | Order of results (default `recent`) |
+| `--json` | Print machine-readable JSON |
+
+Files are recognised by name, so any number of `followers*.json` and `following*.json` files can be passed in any order.
+
+### Install as a command
 
 ```bash
 pip install .
 unfollows followers_1.json following.json --sort az
 ```
+
+### Use as a library
+
+```python
+import json
+from unfollows import compare
+
+followers = json.load(open("followers_1.json"))
+following = json.load(open("following.json"))
+
+result = compare([followers], [following], sort="az")
+print(result["not_following_back"])
+```
+
+Try it with the files in [`sample/`](sample/).
+
+## Getting your Instagram data
+
+1. Go to **Accounts Center → Your information and permissions → Download your information**.
+2. Choose **Some of your information → Followers and following**.
+3. Pick **Download to device**, format **JSON**, date range **All time**.
+4. Unzip it. The files are in `connections/followers_and_following/`.
+
+## How it works
+
+`unfollows.py` is organised as small, testable functions:
+
+- `extract_accounts()` normalises each export record into an `Account(username, timestamp)`. Newer exports keep the username in `title`, older ones in `string_list_data[].value`, and the profile `href` is the fallback.
+- `not_following_back()` does a set difference keyed on the lower-cased username, keeping follow order and removing duplicates.
+- `sort_accounts()` and `compare()` sort the result and return a summary.
+- `main()` is the `argparse` CLI.
 
 ## Tests
 
@@ -79,35 +84,21 @@ unfollows followers_1.json following.json --sort az
 python -m unittest discover -s tests -v
 ```
 
-Tests run on every push via GitHub Actions.
-
-## Run the web app locally
-
-The page fetches `unfollows.py`, so serve the folder rather than opening the file directly:
-
-```bash
-python3 -m http.server 8000
-```
-
-Then visit http://localhost:8000.
+They run on every push via GitHub Actions on Python 3.9 and 3.12.
 
 ## Project structure
 
 ```
-unfollows.py      parsing + comparison + CLI (the core)
-tests/            unit tests (unittest)
-index.html        page markup
-style.css         styles (light + dark)
-app.js            UI; runs unfollows.py via Pyodide
-pyproject.toml    packaging, `unfollows` console script
-favicon.svg       icon
-CNAME             custom domain for GitHub Pages
-sample/           example export files
+unfollows.py          core logic + CLI
+tests/                unit tests
+sample/               example export files
+pyproject.toml        packaging (`unfollows` console script)
+.github/workflows/    CI
 ```
 
-## Deploy
+## Privacy
 
-Hosted on GitHub Pages from the `main` branch root. The `CNAME` file points it at `unfollows.aastikz.me`. Add a DNS `CNAME` record for `unfollows` pointing to `<github-username>.github.io`.
+Everything runs locally. Your export files are never sent anywhere.
 
 ## Disclaimer
 
